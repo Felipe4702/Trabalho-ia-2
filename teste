@@ -1,0 +1,88 @@
+import tensorflow as tf
+from tensorflow.keras import datasets, layers, models
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 1. Carregamento e Pré-processamento da Base de Dados (CIFAR-10)
+# CIFAR-10 possui 60.000 imagens coloridas em 10 classes.
+(train_images, train_labels), (test_images, test_labels) = datasets.cifar10.load_data()
+
+# Normalização dos valores dos pixels para o intervalo [0, 1]
+# Isso estabiliza o gradiente descendente durante o treinamento
+train_images, test_images = train_images / 255.0, test_images / 255.0
+
+# Nomes das classes para as legendas dos gráficos
+class_names = ['Avião', 'Carro', 'Pássaro', 'Gato', 'Cervo', 
+               'Cachorro', 'Sapo', 'Cavalo', 'Navio', 'Caminhão']
+
+# 2. Construção da Arquitetura da CNN
+model = models.Sequential()
+
+# Primeira camada convolucional + MaxPooling
+# Extração de características de baixo nível (bordas, texturas)
+model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)))
+model.add(layers.MaxPooling2D((2, 2)))
+
+# Segunda camada convolucional + MaxPooling
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(layers.MaxPooling2D((2, 2)))
+
+# Terceira camada convolucional
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+
+# Transformação das matrizes em um vetor unidimensional (Flatten) e camadas Densas
+model.add(layers.Flatten())
+model.add(layers.Dense(64, activation='relu'))
+model.add(layers.Dense(10)) # 10 neurônios de saída, correspondentes às 10 classes
+
+# 3. Compilação do Modelo
+# Usamos Sparse Categorical Crossentropy pois os rótulos são inteiros (não one-hot encoded)
+model.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
+
+# 4. Treinamento da Rede
+# 10 épocas são suficientes para visualizar a convergência neste escopo acadêmico
+history = model.fit(train_images, train_labels, epochs=10, 
+                    validation_data=(test_images, test_labels))
+
+# 5. Avaliação de Resultados e Geração de Gráficos
+# Gráfico 1: Evolução da Acurácia e da Perda
+plt.figure(figsize=(12, 4))
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Acurácia no Treino')
+plt.plot(history.history['val_accuracy'], label='Acurácia na Validação')
+plt.xlabel('Época')
+plt.ylabel('Acurácia')
+plt.ylim([0, 1])
+plt.legend(loc='lower right')
+plt.title('Evolução da Acurácia')
+
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Perda no Treino')
+plt.plot(history.history['val_loss'], label='Perda na Validação')
+plt.xlabel('Época')
+plt.ylabel('Perda')
+plt.legend(loc='upper right')
+plt.title('Evolução da Função de Custo (Loss)')
+plt.show() # Salve esta figura para o artigo
+
+# Gráfico 2: Exibição de algumas previsões do modelo
+predictions = model.predict(test_images)
+
+plt.figure(figsize=(10, 5))
+for i in range(10):
+    plt.subplot(2, 5, i+1)
+    plt.xticks([])
+    plt.yticks([])
+    plt.grid(False)
+    plt.imshow(test_images[i], cmap=plt.cm.binary)
+    
+    # Rótulo previsto (maior probabilidade) vs Rótulo real
+    predicted_label = np.argmax(predictions[i])
+    true_label = test_labels[i][0]
+    color = 'blue' if predicted_label == true_label else 'red'
+    
+    plt.xlabel(f"{class_names[predicted_label]}\n({class_names[true_label]})", color=color)
+plt.tight_layout()
+plt.show() # Salve esta figura para o artigo
